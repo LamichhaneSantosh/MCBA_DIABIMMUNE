@@ -1,0 +1,27 @@
+library(readxl)
+library(RColorBrewer)
+library(ggplot2)
+library(dplyr)
+library(viridis) 
+
+
+Figure2 <- read_excel("Manuscript/Version6_Revision/Sourcedata_script/Figure2/Figure2.xlsx")
+
+# Create the plot with improved color
+ggplot(Figure2) +
+  geom_bar(aes(x = variable, y = value, fill = as.numeric(value)), stat = 'identity', color = "black", alpha = 0.7) +
+  scale_fill_gradientn(colors = brewer.pal(9, "BuGn")) +
+  facet_wrap(~ row, nrow = 1) +
+  coord_flip() +
+  labs(title = "MCBAs",
+       x = "Conjugated amino acids",
+       y = "Bile acids") +
+  theme_bw() +
+  theme(panel.grid = element_line(color = "ivory1"),
+        panel.background = element_rect(fill = "aliceblue"),
+        axis.text.x = element_blank(),  # Remove x-axis text
+        axis.ticks.x = element_blank(),  # Remove x-axis ticks
+        axis.title = element_text(size = 12),
+        legend.text = element_text(size = 10),
+        strip.text = element_text(size = 8),
+        axis.text.y = element_text(size = 10, face = "bold"))  # Set y-axis text to bold
