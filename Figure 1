@@ -1,1 +1,68 @@
+###Most of these were create using Adobe, so no code envolved with exception for the sample bar plot
+
+
+# Load necessary libraries
+library(ggplot2)
+library(dplyr)
+library(readxl)
+
+
+## Read you data
+df <- read_excel("~/TY2007025_backup/BAA_DIABIMMUNE_dataset/BAA_Analaysis_Nov2023/Manuscript/Version6_Revision/Sourcedata_script/Figure1/Samplenumberplot.xlsx")
+View(Samplenumberplot)
+
+# Filter only the relevant age groups
+age_groups <- c(3, 6, 12, 18, 24, 36)
+df_filtered <- df %>% filter(AgeR %in% age_groups)
+
+# Summarize the counts for each Case at each AgeR
+df_summary <- df_filtered %>%
+  group_by(AgeR, Case) %>%
+  summarise(count = n(), .groups = "drop")
+
+# Plot the data
+ggplot(df_summary, aes(x = factor(AgeR), y = count, fill = Case)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  scale_fill_manual(values = c("CTR" = "#1f78b4", "OneAb" = "#33a02c", "TwoAb" = "#e31a1c")) +
+  labs(title = "Sample Counts by Age and Case Group",
+       x = "Age (weeks/months)",
+       y = "Sample Count",
+       fill = "Case Group") +
+  theme_minimal(base_size = 14) +
+  theme(legend.position = "top",
+        axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+#library(ggplot2)
+library(dplyr)
+
+# Summarize data
+df_summary <- df %>%
+  filter(AgeR %in% c(3, 6, 12, 18, 24, 36)) %>%
+  group_by(AgeR, Case) %>%
+  summarise(count = n(), .groups = "drop")
+
+# Custom colors for a modern look
+custom_colors <- c("CTR" = "#0072B2", "OneAb" = "#009E73", "TwoAb" = "#D55E00")
+
+# Create a refined bar plot
+ggplot(df_summary, aes(x = factor(AgeR), y = count, fill = Case)) +
+  geom_col(position = position_dodge(width = 0.7), width = 0.6, color = "black", linewidth = 0.3) +  # Rounded bar look
+  geom_text(aes(label = count), position = position_dodge(width = 0.7), vjust = -0.3, size = 5, fontface = "bold") +  
+  scale_fill_manual(values = custom_colors) +
+  labs(title = "Sample Counts by Age and Case Group",
+       x = "Age (weeks/months)",
+       y = "Sample Count",
+       fill = "Case Group") +
+  theme_minimal(base_size = 16) +  # Enhanced font size
+  theme(
+    legend.position = "top",
+    legend.title = element_text(face = "bold"),
+    axis.text = element_text(face = "bold", color = "black"),
+    axis.title = element_text(face = "bold"),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.y = element_line(color = "gray80", linetype = "dashed")
+  ) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.1)))  # Adjust space on top
 
