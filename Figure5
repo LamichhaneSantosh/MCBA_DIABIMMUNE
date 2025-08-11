@@ -1,0 +1,116 @@
+setwd("~/TY2007025_backup/BAA_DIABIMMUNE_dataset/BAA_Analaysis_Nov2023/Metagenomics_matched/2025_correlation_analysis")
+
+library(readxl)
+MCBA_data <- read_excel("TY2007025_backup/BAA_DIABIMMUNE_dataset/BAA_Analaysis_Nov2023/Metagenomics_matched/2025_correlation_analysis/Metagenomics_data.xlsx", 
+                        sheet = "MCBAdata")
+Metagenomics_data <- read_excel("TY2007025_backup/BAA_DIABIMMUNE_dataset/BAA_Analaysis_Nov2023/Metagenomics_matched/2025_correlation_analysis/Metagenomics_data.xlsx")
+
+
+
+# Define the column names to keep, including 'SampleID'
+selected_cols <- c("SampleID", "CDCAAla", "CDCASer", "UDCAAsn", "CACys", "CACitrulline",
+                   "CDCATyr", "DCAVal", "DCAIle", "DCALeu", "DCAPro")
+
+# Safely select only the columns that exist in the matrix
+existing_cols <- intersect(selected_cols, colnames(MCBA_data))
+
+# Subset the matrix
+MCBA_data_selected <- MCBA_data[, existing_cols, drop = FALSE]
+
+
+
+# Convert to data.frame
+MCBA_data_selected <- as.data.frame(MCBA_data_selected)
+Metagenomics_data <- as.data.frame(Metagenomics_data)
+
+# Ensure SampleID is character
+MCBA_data_selected$SampleID <- as.character(MCBA_data_selected$SampleID)
+Metagenomics_data$SampleID <- as.character(Metagenomics_data$SampleID)
+
+# Merge datasets on SampleID
+merged_data <- merge(MCBA_data_selected, Metagenomics_data, by = "SampleID")
+
+# Extract feature matrices (excluding SampleID)
+MCBA_mat <- merged_data[, colnames(MCBA_data_selected)[-1]]
+Metagenomics_mat <- merged_data[, setdiff(colnames(Metagenomics_data), "SampleID")]
+
+# --- 2. Compute Spearman Correlation and P-values ---
+
+# Initialize correlation and p-value matrices
+cor_matrix <- matrix(NA, nrow = ncol(MCBA_mat), ncol = ncol(Metagenomics_mat))
+pval_matrix <- matrix(NA, nrow = ncol(MCBA_mat), ncol = ncol(Metagenomics_mat))
+rownames(cor_matrix) <- colnames(MCBA_mat)
+colnames(cor_matrix) <- colnames(Metagenomics_mat)
+rownames(pval_matrix) <- colnames(MCBA_mat)
+colnames(pval_matrix) <- colnames(Metagenomics_mat)
+
+# Loop to compute correlation and p-values
+for (i in 1:ncol(MCBA_mat)) {
+  for (j in 1:ncol(Metagenomics_mat)) {
+    x <- MCBA_mat[[i]]
+    y <- Metagenomics_mat[[j]]
+    test <- cor.test(x, y, method = "spearman", exact = FALSE)
+    cor_matrix[i, j] <- test$estimate
+    pval_matrix[i, j] <- test$p.value
+  }
+}
+
+# --- 3. Mask Non-significant Correlations ---
+
+# Mask values with p > 0.05
+cor_matrix_masked <- cor_matrix
+cor_matrix_masked[pval_matrix > 0.05] <- 0
+# Keep columns that have at least one non-zero value
+cor_matrix_masked <- cor_matrix_masked[, colSums(cor_matrix_masked != 0) > 0]
+
+
+# Remove rows and columns with all or mostly NA
+dfN <- cor_matrix_masked[
+  rowSums(!is.na(cor_matrix_masked)) > 1,
+  colSums(!is.na(cor_matrix_masked)) > 1
+]
+
+# --- 4. Heatmap Plot ---
+
+
+
+
+
+
+# Load pheatmap
+if (!require("pheatmap")) install.packages("pheatmap")
+library(pheatmap)
+
+# Center color range at 0
+rg <- max(abs(dfN), na.rm = TRUE)
+
+# Option 1: Blue - White - Red
+custom_palette1 <- colorRampPalette(c("blue", "lightyellow", "red"))(100)
+
+pheatmap(
+  dfN,
+  col = custom_palette1,
+  cluster_rows = TRUE,
+  cluster_cols = TRUE,
+  fontsize_row = 8,
+  fontsize_col = 8,
+  breaks = seq(-rg, rg, length.out = 100),
+  border_color = NA,
+  main = "Spearman Correlations"
+)
+
+
+setwd("~/TY2007025_backup/BAA_DIABIMMUNE_dataset/BAA_Analaysis_Nov2023/Metagenomics_matched/2025_correlation_analysis")
+
+library(writexl)
+
+# Export cor_matrix_masked as Excel file
+write_xlsx(as.data.frame(cor_matrix_masked), "cor_matrix_masked.xlsx")
+
+
+
+
+
+
+
+
