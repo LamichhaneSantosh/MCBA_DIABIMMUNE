@@ -1,0 +1,42 @@
+# Load necessary libraries
+library(ggplot2)
+library(reshape2)
+
+library(readxl)
+CA <- read_excel("C:/Users/sanlam/Desktop/BAA_DIABIMMUNE_dataset/BAA_Analaysis_Nov2023/Forplots.xlsx", 
+                       sheet = "CA")
+
+## You need to melt data individually
+melted_data <- melt(CA, id.vars = c("AgeR"))
+
+%%%
+
+
+%%
+  # Define a custom palette with 21 visually distinct colors
+  custom_colors <- c('Arg' = "#FF0000", 'Asn' = 'coral3', 'Asp' = "#bcbd22", 'Citrulline' = 'midnightblue', 'Cys' = "#9467bd", 'Gln' = "#17becf", 'Glu' = 'steelblue4', 'His' = "#1f77b4", 'Ile' = 'coral2', 'LDoPA' = "#c49c94", 'Leu' = "#d62728", 'Lys' = "#2ca02c", 'Met' = 'darkred', 'Phe' = 'blue4', 'Pro' = "#8000FF", 'Ser' = "#c5b0d5", 'Thr' = "#ad494a", 'Trp' = "#e377c2", 'Tyr' = "#9edae5", 'Val' = "#dbdb8d")
+
+  
+  ggplot(melted_data, aes(x = AgeR, y = log2(value), color = variable, fill = variable, group = variable)) + 
+  geom_smooth(method = "loess", alpha = 0.09, linetype = "dashed", size = 0.5) +  # Adjust the size parameter
+  labs(x = "Age", 
+       y = "Log2-Transformed Relative Level") + 
+  theme_classic() + scale_color_manual(values = custom_colors) +
+  scale_fill_manual(values = custom_colors) 
+
+
+  %%%
+  
+  
+  % custom_colors <- c("#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#00FFFF", "#FF00FF", "#808080", "#800000", "#008000", "#000080", "#800080", "#008080", "#808000", "#8000FF", "#FF8000", "#00FF80", "#80FF00", "#FF0080", "#8000C0", "#C08000")
+  
+  
+  %%%
+  
+  ggplot(melted_data, aes(x = AgeR, y = log2(value), color = variable, fill = variable, group = variable)) + 
+    geom_smooth(method = "loess", alpha = 0.09, linetype = "dashed", size = 0.5) +  # Adjust the size parameter
+    labs(x = "Age", 
+         y = "Log2-Transformed Relative Level") + 
+    theme_classic() + scale_color_manual(values = custom_colors)  # Assign 21 visually distinct colors
+  
+  %%%%%%%%%%%%%%%%
