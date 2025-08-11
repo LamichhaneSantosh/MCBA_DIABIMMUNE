@@ -1,0 +1,52 @@
+## Figure 4a
+
+library(ggplot2)
+library(dplyr)
+
+#### Read the data
+
+results <- read_excel("Breastfedlength/Longitudinal/Results.xlsx", 
+                      sheet = "OneAb")
+
+results$Color <- ifelse(results$P_Value < 0.05, "Significant", "Not Significant")
+
+####
+
+color_mapping <- c('CA' = 'coral2', 'CDCA' = 'coral3', 'DCA' = 'coral4','HDCA' = 'midnightblue', 'UDCA' = 'darkred')
+
+p <- ggplot(results, aes(y = Variable, x = Coefficient, fill = Color, color = Class2, group = Class2)) +
+  geom_point(size = 2, shape = 21, stroke = 0.7) +
+  geom_vline(xintercept = 0, linetype = "dashed") +
+  geom_hline(data = results %>% distinct(Class2, .keep_all = TRUE), aes(yintercept = Variable), color = "black", linetype = "dashed") +
+  labs(title = "Regression Coefficients",
+       x = "Coefficient Estimate",
+       y = "Variable") +
+  scale_fill_manual(values = c("Significant" = "peachpuff4", "Not Significant" = "grey99")) +
+  scale_color_manual(values = color_mapping) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(size = 8),
+    axis.text.y = element_blank(),  # Remove y-axis labels
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.background = element_rect(fill = "white"),
+    plot.title = element_text(size = 16, hjust = 0.5),
+    legend.position = "bottom",
+    legend.title = element_blank(),
+    legend.text = element_text(size = 10),  # Adjust text size here
+    axis.title.x = element_text(size = 14)
+  )
+
+# Adjust x-coordinate of error bars and text labels for "Significant" coefficients
+p <- p + geom_errorbarh(
+  data = subset(results, Color == "Significant"),
+  aes(xmax = Coefficient + 1.96 * SE, xmin = Coefficient - 1.96 * SE), alpha = 0.25, size = 1.3)
+
+p <- p + geom_text(
+  data = subset(results, Color == "Significant"),
+  aes(label = Variable, x = Coefficient + 1, colour = Class2))
+
+
+#If you want to use the same updated size for geom_text()use update_geom_defaults("text", list(size = 6))
+# Print the plot
+print(p)
