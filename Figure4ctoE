@@ -1,0 +1,45 @@
+
+
+library(ggplot2)
+library(readxl)
+
+Alldata <- read_excel("Manuscript/Version6_Revision/Sourcedata_script/Figure4/Figure4.xlsx", 
+                      sheet = "Figure4ctoD")
+
+
+# Filter data for specific cases (OneAb and CTR)
+subset_OneAb <- subset(Alldata, Case %in% c("OneAb", "CTR"))
+subset_TwoAb <- subset(Alldata, Case %in% c("TwoAb", "CTR"))
+custom_colors <- c('CTR' = "darkred", 'OneAb' = '#9edae5', 'TwoAb'  = "#2ca02c")
+
+
+
+# Plot the filtered data subset_OneAb CDCATyr
+ggplot(subset_OneAb, aes(x = AgeR, y = log2(CDCATyr), color = Case, fill = Case, group = Case)) + 
+  geom_smooth(method = "loess", alpha = 0.09, linetype = "dashed", size = 0.5) +
+  labs(x = "Age", y = "Log2-Transformed Relative Level") + 
+  theme_classic()+ scale_color_manual(values = custom_colors) + scale_fill_manual(values = custom_colors)
+
+
+# Plot the filtered data subset_OneAb DCAVal
+ggplot(subset_OneAb, aes(x = AgeR, y = log2(DCAVal), color = Case, fill = Case, group = Case)) + 
+  geom_smooth(method = "loess", alpha = 0.09, linetype = "dashed", size = 0.5) +
+  labs(x = "Age", y = "Log2-Transformed Relative Level") + 
+  theme_classic()+ scale_color_manual(values = custom_colors) + scale_fill_manual(values = custom_colors)
+
+
+
+# Plot the filtered data subset_TwoAb CDCASer
+
+ggplot(subset_TwoAb, aes(x = AgeR, y = log2(CDCASer), color = Case, fill = Case, group = Case)) + 
+  geom_smooth(method = "loess", alpha = 0.09, linetype = "dashed", size = 0.5) +
+  labs(x = "Age", y = "Log2-Transformed Relative Level") + 
+  theme_classic()+ scale_color_manual(values = custom_colors) + scale_fill_manual(values = custom_colors) 
+
+# Plot the filtered data subset_TwoAb UDCAAsn
+
+ggplot(subset_TwoAb, aes(x = AgeR, y = log2(UDCAAsn), color = Case, fill = Case, group = Case)) + 
+  geom_smooth(method = "loess", alpha = 0.09, linetype = "dashed", size = 0.5) +
+  labs(x = "Age", y = "Log2-Transformed Relative Level") + 
+  theme_classic()+ scale_color_manual(values = custom_colors) + scale_fill_manual(values = custom_colors) 
+
