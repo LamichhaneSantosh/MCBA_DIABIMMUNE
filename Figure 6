@@ -1,0 +1,210 @@
+---
+title: "NCOMMS-25-17395_Figure6_Rscript"
+output: html_document
+date: "2025-08-04"
+---
+
+
+```{r}
+# === PACKAGES & THEME ======================================================
+if (!requireNamespace("here",       quietly=TRUE)) install.packages("here")
+if (!requireNamespace("tidyverse",  quietly=TRUE)) install.packages("tidyverse")
+if (!requireNamespace("MESS",       quietly=TRUE)) install.packages("MESS")
+if (!requireNamespace("MetBrewer",  quietly=TRUE)) install.packages("MetBrewer")
+if (!requireNamespace("patchwork",  quietly=TRUE)) install.packages("patchwork")
+if (!requireNamespace("svglite",    quietly=TRUE)) install.packages("svglite")
+
+library(here)
+library(tidyverse)
+library(MESS)        # auc()
+library(MetBrewer)   # palettes
+library(patchwork)   # combine plots
+library(svglite)     # SVG export
+library(rstatix)
+
+theme_pub <- function() {
+  theme_minimal(base_size = 14) +
+    theme(
+      strip.text       = element_text(face = "bold"),
+      legend.position  = "bottom",
+      panel.grid       = element_blank()
+    )
+}
+
+# === I/O & DATA WRANGLING ================================================
+# (adjust path inside here() as needed)
+df_raw <- read_csv(here("", # Folder name
+                       "NCOMMS-25-17395_Fig6_rawMFIdata.csv")) #Raw file name
+
+
+# pivot to long
+df_long <- df_raw %>%
+  pivot_longer(
+    cols      = c("pp38", "pERK", "IkBa"),
+    names_to  = "protein",
+    values_to = "MFI"
+  ) %>%
+  mutate(
+    protein   = factor(protein, levels = c("pp38","pERK","IkBa")),
+    Treatment = factor(Treatment,
+                       levels = c("No Treatment","Inhibitors","UDCA",
+                                  "Trp-UDCA","Asp-UDCA","Glu-UDCA",
+                                  "Asn-UDCA","Cit-UDCA","DCA")),
+    Replicate = factor(Replicate)
+  )
+
+# === SUMMARY & AUC COMPUTATION =============================================
+# Mean MFI per protein/treatment/time
+mean_df <- df_long %>%
+  group_by(protein, Treatment, Stimulation) %>%
+  summarise(mean_mfi = mean(MFI), .groups = "drop")
+
+# Overall AUC per protein/treatment
+auc_df <- mean_df %>%
+  group_by(protein, Treatment) %>%
+  summarise(auc = auc(Stimulation, mean_mfi), .groups = "drop")
+
+# Per-replicate AUC
+rep_auc_df <- df_long %>%
+  group_by(protein, Treatment, Replicate, Stimulation) %>%
+  summarise(mean_mfi = mean(MFI), .groups = "drop") %>%
+  group_by(protein, Treatment, Replicate) %>%
+  summarise(auc = auc(Stimulation, mean_mfi), .groups = "drop")
+
+
+# === COLOR PALETTE ========================================================
+
+pal <- met.brewer("Redon", 9)
+treatment_colors <- c(
+  "No Treatment" = "grey",
+  "Inhibitors"  = "darkred",
+  "UDCA"        = pal[1],
+  "Trp-UDCA"    = pal[2],
+  "Asp-UDCA"    = pal[4],
+  "Glu-UDCA"    = pal[6],
+  "Asn-UDCA"    = pal[3],
+  "Cit-UDCA"    = pal[5],
+  "DCA"         = "#256294"
+)
+# For DCA‐only plots:
+dca_colors <- treatment_colors[c("No Treatment","Inhibitors","DCA")]
+
+# === PLOTS =================================================================
+
+# 1. UDCA series: Timecourse + AUC overlay (excluding DCA)
+p_tc_udca <- mean_df %>%
+  filter(Treatment != "DCA") %>%
+  ggplot(aes(Stimulation, mean_mfi, color = Treatment, fill = Treatment)) +
+    geom_line(size = 0.7) +
+    geom_area(alpha = 0.1, position = "identity") +
+    geom_point() +
+    facet_wrap(~ protein, scales = "free_y", ncol = 3) +
+    scale_color_manual(values = treatment_colors) +
+    scale_fill_manual(values  = treatment_colors) +
+    scale_x_continuous(breaks = c(0,3,7,15,30,60)) +
+    labs(x="Stimulation (min)", y="Mean MFI") +
+    theme_pub()
+
+
+p_ov_udca <- rep_auc_df %>%
+  filter(Treatment != "DCA") %>%
+  ggplot(aes(Treatment, auc, fill = Treatment)) +
+    stat_summary(fun="mean", geom="col", position=position_dodge(0.9)) +
+    geom_jitter(position = position_jitterdodge(jitter.width = 0, dodge.width = 0),
+                size=2, alpha=0.8) +
+    facet_wrap(~ protein, scales = "free_y", ncol = 3) +
+    scale_fill_manual(values = treatment_colors) +
+    scale_color_manual(values = treatment_colors) +
+    labs(x="Treatment", y="AUC") +
+    theme_pub() +
+    theme(axis.text.x = element_text(angle=45, hjust=1))
+
+# Save UDCAs panel
+fig_udca <- (p_tc_udca / p_ov_udca) +
+  plot_annotation(tag_levels = "A") &
+  theme(plot.tag = element_text(face="bold"))
+
+ggsave("fig_udca_timecourse_overlay.pdf", fig_udca, width = 12, height = 10)
+
+
+
+# 2. DCA vs controls: Timecourse + AUC overlay
+p_tc_dca <- mean_df %>%
+  filter(Treatment %in% c("No Treatment","Inhibitors","DCA")) %>%
+  ggplot(aes(Stimulation, mean_mfi, color = Treatment, fill = Treatment)) +
+    geom_line(size=0.7) +
+    geom_area(alpha=0.1, position="identity") +
+    geom_point() +
+    facet_wrap(~ protein, scales="free_y", ncol=3) +
+    scale_color_manual(values = dca_colors) +
+    scale_fill_manual(values  = dca_colors) +
+    scale_x_continuous(breaks=c(0,3,7,15,30,60)) +
+    labs(x="Stimulation (min)", y="Mean MFI") +
+    theme_pub()
+
+p_ov_dca <- rep_auc_df %>%
+  filter(Treatment %in% c("No Treatment","Inhibitors","DCA")) %>%
+  ggplot(aes(Treatment, auc, fill = Treatment)) +
+    stat_summary(fun="mean", geom="col", position="dodge") +
+    geom_jitter(position = position_jitterdodge(jitter.width = 0, dodge.width = 0), size=2, alpha=1) +
+    facet_wrap(~ protein, scales="free_y", ncol=3) +
+    scale_fill_manual(values = dca_colors) +
+    scale_color_manual(values = dca_colors) +
+    labs(x="Treatment", y="AUC") +
+    theme_pub() +
+    theme(axis.text.x = element_text(angle=45, hjust=1))
+
+fig_dca <- (p_tc_dca / p_ov_dca) +
+  plot_annotation(tag_levels = "A") &
+  theme(plot.tag = element_text(face="bold")) 
+
+ggsave("fig_dca_timecourse_overlay.pdf", fig_dca, width = 12, height = 10)
+
+
+
+
+
+# === Area Under the Curve Calculation =================================================================
+treatment_levels <- c("No Treatment", "Inhibitors", "UDCA", "Trp-UDCA", "Asp-UDCA", "Glu-UDCA", "Asn-UDCA", "Cit-UDCA", "DCA")
+
+compute_mean_auc <- function(df) {
+  mean_mfi <- df %>%
+    group_by(protein, Treatment, Stimulation) %>%
+    summarize(Mean_MFI = mean(MFI, na.rm = TRUE), .groups = "drop")
+  auc_df <- mean_mfi %>%
+    group_by(protein, Treatment) %>%
+    summarize(AUC = auc(Stimulation, Mean_MFI), .groups = "drop")
+  list(mean_mfi = mean_mfi, auc = auc_df)
+}
+
+compute_replicate_aucs <- function(df_long) {
+  aucs <- lapply(unique(df_long$Replicate), function(r) {
+    res <- compute_mean_auc(df_long %>% filter(Replicate == r))
+    df <- res$auc
+    names(df)[names(df) == "AUC"] <- paste0("AUC.", r)
+    df
+  })
+  Reduce(function(x, y) full_join(x, y, by = c("protein", "Treatment")), aucs)
+}
+
+
+
+auc_replicates_wide <- compute_replicate_aucs(df_long)
+
+
+AUCreplicates_long <- auc_replicates_wide %>%
+  pivot_longer(
+    cols = starts_with("AUC."),
+    names_to = "Replicate",
+    values_to = "AUC"
+  ) %>%
+  mutate(
+    Replicate = sub("AUC_rep", "Replicate ", Replicate),
+    protein = factor(protein, levels = c("pp38", "pERK", "IkBa")),
+    Treatment = factor(Treatment, levels = treatment_levels),
+    Replicate = factor(Replicate))
+
+
+
+```
+
